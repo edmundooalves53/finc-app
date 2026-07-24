@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0E1210">
 <link rel="manifest" href="./manifest.json">
-<link rel="icon" href="./icons/icon-192.png">
-<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<link rel="icon" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./icon-192.png">
 <title>Finc</title>
 
 <!-- Firebase (compat build — funciona com script simples, sem precisar de bundler) -->
@@ -475,14 +475,24 @@ function fmtMoney(v){
 // Troque os valores abaixo pelos do SEU projeto Firebase (veja o README.md
 // na pasta do projeto para o passo a passo de onde pegar esses dados).
 // ======================================================================
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "COLE_AQUI_SUA_API_KEY",
-  authDomain: "COLE_AQUI.firebaseapp.com",
-  projectId: "COLE_AQUI_SEU_PROJECT_ID",
-  storageBucket: "COLE_AQUI.appspot.com",
-  messagingSenderId: "COLE_AQUI",
-  appId: "COLE_AQUI"
+  apiKey: "AIzaSyDVBiYJpD-03KReu9r03qU1oO0ImOBbyUQ",
+  authDomain: "finc-app-9c993.firebaseapp.com",
+  projectId: "finc-app-9c993",
+  storageBucket: "finc-app-9c993.firebasestorage.app",
+  messagingSenderId: "150562917266",
+  appId: "1:150562917266:web:84461d2a6eda7666a20f4b"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
