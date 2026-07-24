@@ -475,14 +475,8 @@ function fmtMoney(v){
 // Troque os valores abaixo pelos do SEU projeto Firebase (veja o README.md
 // na pasta do projeto para o passo a passo de onde pegar esses dados).
 // ======================================================================
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
-
-// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDVBiYJpD-03KReu9r03qU1oO0ImOBbyUQ",
+  apiKey: "AIzaSyDVBiYJpD-O3KReu9r03qU1oO0ImOBbyUQ",
   authDomain: "finc-app-9c993.firebaseapp.com",
   projectId: "finc-app-9c993",
   storageBucket: "finc-app-9c993.firebasestorage.app",
@@ -490,8 +484,9 @@ const firebaseConfig = {
   appId: "1:150562917266:web:84461d2a6eda7666a20f4b"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
 
 firebase.initializeApp(firebaseConfig);
