@@ -1,0 +1,1471 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0E1210">
+<link rel="manifest" href="./manifest.json">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/icon-192.png">
+<title>Finc</title>
+
+<!-- Firebase (compat build — funciona com script simples, sem precisar de bundler) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  :root{
+    --bg: #0E1210;
+    --card: #161C19;
+    --card-2: #1B2320;
+    --card-border: #232B27;
+    --ink: #EDEFEC;
+    --muted: #8B958F;
+    --green: #3ECF8E;
+    --green-deep: #1F5A42;
+    --track: #232B27;
+    --danger: #C0524A;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{ height:100%; }
+  body{
+    margin:0;
+    background: #05070E;
+    color:var(--ink);
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding: 20px;
+  }
+
+  #shell{
+    width: 380px;
+    max-width: 100%;
+    height: 720px;
+    max-height: 92vh;
+    background: var(--bg);
+    border: 1px solid var(--card-border);
+    border-radius: 30px;
+    overflow: hidden;
+    display:flex;
+    flex-direction:column;
+    box-shadow: 0 30px 60px rgba(0,0,0,0.5);
+    position: relative;
+  }
+
+  #content{
+    flex: 1;
+    overflow-y: auto;
+    padding: 22px 18px 12px;
+  }
+  #content::-webkit-scrollbar{ width:0; }
+
+  .wordmark{ display:flex; align-items:center; gap:8px; margin-bottom: 18px; }
+  .wordmark svg{ width:20px; height:20px; }
+  .wordmark .word{ font-size:15px; font-weight:800; letter-spacing:0.02em; }
+  .wordmark .word .c{ color: var(--green); }
+
+  .backbar{
+    display:flex; align-items:center; gap:8px;
+    font-size: 14px; font-weight:700; margin-bottom: 16px; cursor:pointer;
+  }
+  .backbar .arrow{ font-size:16px; color: var(--muted); }
+
+  .app-topbar{ display:flex; align-items:center; justify-content:space-between; margin-bottom: 22px; }
+  .app-topbar .left{ display:flex; align-items:flex-end; gap:7px; }
+  .hamburger{ display:flex; flex-direction:column; gap:4px; cursor:pointer; padding:4px; margin-bottom:6px; }
+  .hamburger span{ width:19px; height:2.5px; background: var(--green); border-radius:2px; }
+  .topbar-logo{ width:22px; height:46px; flex-shrink:0; }
+  .topbar-word{ font-size:28px; font-weight:800; letter-spacing:0.01em; }
+  .topbar-word .c{ color: var(--green); }
+  .bell-btn{ position:relative; color: var(--ink); width:22px; height:22px; cursor:pointer; }
+  .bell-btn svg{ width:100%; height:100%; }
+  .bell-btn .dot{ position:absolute; top:-1px; right:-1px; width:7px; height:7px; border-radius:50%; background: var(--green); border: 1.5px solid var(--bg); }
+
+  /* Side menu */
+  #menu-overlay{ position:absolute; inset:0; background: rgba(0,0,0,0.55); z-index: 40; }
+  .side-menu{
+    position:absolute; top:0; left:0; bottom:0; width: 78%; max-width: 290px;
+    background: var(--card); border-right: 1px solid var(--card-border);
+    padding: 26px 18px; display:flex; flex-direction:column; gap:4px;
+  }
+  .side-menu .menu-brand{ display:flex; align-items:center; gap:5px; margin-bottom: 22px; }
+  .side-menu .menu-brand svg{ width:13px; height:27px; flex-shrink:0; }
+  .menu-item{
+    display:flex; align-items:center; gap:12px;
+    padding: 12px 10px; border-radius: 12px; font-size: 13.5px; font-weight:600;
+    color: var(--ink); cursor:pointer;
+  }
+  .menu-item svg{ width:19px; height:19px; color: var(--muted); flex-shrink:0; }
+  .menu-item.active{ background: rgba(62,207,142,0.1); color: var(--green); }
+  .menu-item.active svg{ color: var(--green); }
+  .menu-item:active{ background: var(--card-2); }
+
+  /* Próximo compromisso — layout exato da referência */
+  .pc-card{
+    display:flex; align-items:center; gap:12px;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 14px; margin-bottom: 4px; cursor:pointer;
+  }
+  .pc-icon{
+    width:42px; height:42px; border-radius:12px; background: rgba(62,207,142,0.12);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .pc-icon svg{ width:20px; height:20px; color: var(--green); }
+  .pc-mid{ flex:1; }
+  .pc-label{ font-size:11px; color: var(--muted); margin-bottom:2px; }
+  .pc-date{ font-size:15px; font-weight:800; color: var(--ink); }
+  .pc-weekday{ font-size:11px; color: var(--muted); margin-top:1px; }
+  .pc-divider{ width:1px; align-self:stretch; background: var(--card-border); }
+  .pc-right{ text-align:right; padding: 0 4px; }
+  .pc-right .pc-label{ margin-bottom:4px; }
+  .pc-valor{ font-size:15px; font-weight:800; color: var(--green); }
+
+  .greeting{ font-size: 12.5px; color: var(--muted); margin-bottom: 6px; }
+  .greeting-line{ font-size: 19px; font-weight: 800; margin-bottom: 4px; }
+  .greeting-line .name-green{ color: var(--green); }
+  .subtitle{ font-size: 12.5px; color: var(--muted); margin-bottom: 16px; }
+
+  .status-row{ display:flex; align-items:flex-start; gap: 14px; }
+  .ring-mini{ position:relative; width:98px; height:98px; flex-shrink:0; }
+  .ring-mini svg{ width:100%; height:100%; transform: rotate(-90deg); }
+  .ring-mini .pct{
+    position:absolute; inset:0; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; font-size:15px; font-weight:800;
+  }
+  .ring-mini .pct span{ font-size:8.5px; font-weight:600; color: var(--muted); }
+  .status-text{ flex:1; }
+  .status-check{ display:flex; align-items:center; gap:7px; color: var(--green); font-size:12px; font-weight:700; margin-bottom:7px; line-height:1.3; }
+  .check-bubble{
+    width:19px; height:19px; border-radius:50%; background: var(--green);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .check-bubble svg{ width:11px; height:11px; }
+  .status-desc{ font-size: 12.5px; color: var(--ink); line-height:1.4; font-weight:700; }
+
+  .hero-divider{ border-top:1px solid var(--card-border); margin: 14px 0 12px; }
+  .hero-bottom-row{ display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+  .chev-btn{
+    width:28px; height:28px; border-radius:50%; background: rgba(255,255,255,0.06);
+    display:flex; align-items:center; justify-content:center; color: var(--muted); font-size:15px;
+  }
+
+  .compromisso-label{ font-size:10.5px; color: var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:8px; }
+  .compromisso-card{
+    display:flex; align-items:center; gap:12px;
+    background: var(--card); border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 14px; margin-bottom: 4px; cursor:pointer;
+  }
+  .compromisso-icon{
+    width:40px; height:40px; border-radius:12px; background: rgba(62,207,142,0.12);
+    display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:18px;
+  }
+  .compromisso-info{ flex:1; }
+  .compromisso-days{ color: var(--green); font-weight:800; font-size:13px; }
+  .compromisso-date{
+    display:inline-block; margin-top:3px; color: var(--muted); font-size:10px; font-weight:700;
+    background: var(--track); border-radius:100px; padding:2px 8px;
+  }
+  .compromisso-valor-label{ color: var(--muted); font-size:10.5px; }
+  .compromisso-valor{ font-weight:800; font-size:13px; }
+
+  .motiv-card{
+    background: radial-gradient(ellipse at 20% 30%, rgba(62,207,142,0.18), transparent 60%), var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px; padding: 16px; margin: 12px 0;
+    display:flex; align-items:center; gap: 14px;
+  }
+  .motiv-flag{ font-size: 30px; flex-shrink:0; }
+  .motiv-text{ font-size: 12.5px; line-height:1.5; color: var(--ink); }
+  .motiv-text b{ color: var(--green); }
+  .motiv-sub{ font-size:11.5px; color: var(--muted); margin-top:4px; }
+
+  .quick-label{ font-size:13px; font-weight:800; margin: 18px 0 10px; }
+  .quick-grid{ display:grid; grid-template-columns: repeat(3,1fr); gap:8px; }
+  .quick-card{
+    background: var(--card); border:1px solid var(--card-border); border-radius:14px;
+    padding: 12px 10px; cursor:pointer;
+  }
+  .quick-card.disabled{ opacity:0.45; cursor:default; }
+  .quick-icon{
+    width:30px; height:30px; border-radius:9px; background: rgba(62,207,142,0.12);
+    display:flex; align-items:center; justify-content:center; margin-bottom:8px; color: var(--green);
+  }
+  .quick-icon svg{ width:15px; height:15px; }
+  .quick-title{ font-size:11.5px; font-weight:700; margin-bottom:2px; }
+  .quick-sub{ font-size:9.5px; color: var(--muted); line-height:1.3; }
+
+  .hero-card{
+    background: linear-gradient(155deg, #17352A 0%, #131A17 65%);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 22px 20px;
+    margin-bottom: 16px;
+  }
+  .hero-label{
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); font-weight: 700; margin-bottom: 6px;
+  }
+  .hero-number{ font-size: 32px; font-weight: 800; margin-bottom: 12px; }
+  .ring-row{ display:flex; align-items:center; gap: 12px; }
+  .ring{ position:relative; width:44px; height:44px; flex-shrink:0; }
+  .ring svg{ width:100%; height:100%; transform: rotate(-90deg); }
+  .ring-track{ fill:none; stroke: rgba(255,255,255,0.08); stroke-width:6; }
+  .ring-fill{ fill:none; stroke: var(--green); stroke-width:6; stroke-linecap:round; transition: stroke-dasharray .4s ease; }
+  .ring-text{ font-size: 11.5px; color: var(--muted); line-height:1.4; }
+  .ring-text b{ color: var(--ink); }
+
+  .cta{
+    display:flex; justify-content: space-between; align-items:center;
+    background: transparent;
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 13px 15px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+    cursor:pointer;
+  }
+  .cta .go{ color: var(--green); font-size: 15px; }
+  .cta:active{ background: var(--card); }
+
+  .mini-note{ font-size: 11.5px; color: var(--muted); text-align:center; margin: 10px 0 6px; }
+
+  .section-label{
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--muted); font-weight: 700; margin: 16px 0 8px;
+  }
+
+  .card-row{
+    display:flex; justify-content: space-between; align-items:center;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 13px 15px;
+    font-size: 13px;
+    margin-bottom: 8px;
+    cursor:pointer;
+  }
+  .card-row:active{ background: var(--card-2); }
+  .card-row.dashed{ border-style: dashed; opacity: 0.8; }
+  .card-row .name{ font-weight:700; }
+  .card-row .meta{ color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .card-row .val{ font-weight:700; font-size: 13px; white-space:nowrap; }
+  .card-row .val.muted{ color: var(--muted); font-weight:600; font-size:11.5px; }
+
+  .badge-pago{
+    font-size: 10px; font-weight:700; color: var(--green);
+    border: 1px solid var(--green-deep); background: rgba(62,207,142,0.1);
+    border-radius: 100px; padding: 3px 9px;
+  }
+  .badge-pend{
+    font-size: 10px; font-weight:700; color: var(--muted);
+    border: 1px solid var(--card-border); border-radius: 100px; padding: 3px 9px;
+  }
+  .badge-atrasado{
+    font-size: 10px; font-weight:700; color: var(--danger);
+    border: 1px solid var(--danger); background: rgba(192,82,74,0.1);
+    border-radius: 100px; padding: 3px 9px;
+  }
+  .card-row.atrasado{ border-color: rgba(192,82,74,0.4); }
+
+  .btn-add{
+    border: 1.5px dashed var(--card-border);
+    border-radius: 14px;
+    text-align:center;
+    padding: 13px;
+    font-size: 12.5px;
+    color: var(--muted);
+    font-weight: 700;
+    margin-top: 4px;
+    cursor:pointer;
+  }
+  .btn-add:active{ background: var(--card); }
+
+  .edit-icon{
+    font-size: 12px; color: var(--muted); margin-left: 8px; cursor:pointer;
+  }
+
+  .empty-state{
+    text-align:center; padding: 40px 10px; color: var(--muted); font-size: 13px; line-height:1.6;
+  }
+
+  .navbar{
+    display:flex; border-top: 1px solid var(--card-border);
+    background: #0A0D0B;
+  }
+  .navitem{
+    flex:1; display:flex; flex-direction:column; align-items:center; gap:5px;
+    font-size: 10px; color: var(--muted); font-weight:600; padding: 10px 0;
+    cursor:pointer;
+  }
+  .navitem svg{ width:20px; height:20px; }
+  .nav-icon-wrap{ width:36px; height:26px; display:flex; align-items:center; justify-content:center; border-radius:10px; }
+  .navitem.active{ color: var(--green); }
+  .navitem.active .nav-icon-wrap{ background: rgba(62,207,142,0.14); }
+  .navitem.disabled{ opacity: 0.35; cursor: default; }
+  .navdot{ width:5px; height:5px; border-radius:50%; background: currentColor; }
+
+  /* Modal */
+  #modal-overlay{
+    position:absolute; inset:0; background: rgba(0,0,0,0.55);
+    display:flex; align-items:flex-end; justify-content:center;
+    z-index: 20;
+  }
+  .modal-sheet{
+    width:100%; background: var(--card); border-top: 1px solid var(--card-border);
+    border-radius: 22px 22px 0 0; padding: 20px 20px 24px;
+    max-height: 80%; overflow-y:auto;
+  }
+  .modal-title{ font-size:15px; font-weight:800; margin-bottom:14px; }
+  .field-label{ font-size:11px; color: var(--muted); font-weight:700; margin: 12px 0 6px; text-transform:uppercase; letter-spacing:0.04em; }
+  .field-input, select.field-input{
+    width:100%; background: var(--bg); border:1px solid var(--card-border);
+    color: var(--ink); border-radius: 10px; padding: 10px 12px; font-size: 13px;
+    outline:none;
+  }
+  .field-input:focus{ border-color: var(--green); }
+  .toggle-row{ display:flex; align-items:center; justify-content:space-between; margin-top:12px; }
+  .toggle-row .lbl{ font-size:13px; font-weight:600; }
+  .switch{ width:38px; height:22px; border-radius:100px; background: var(--track); position:relative; cursor:pointer; flex-shrink:0; }
+  .switch.on{ background: var(--green-deep); }
+  .switch .knob{ position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background: var(--muted); transition: all .2s; }
+  .switch.on .knob{ left:18px; background: var(--green); }
+
+  .modal-btns{ display:flex; gap:10px; margin-top: 20px; }
+  .btn{
+    flex:1; text-align:center; padding: 12px; border-radius: 12px; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .btn-cancel{ background: transparent; border: 1px solid var(--card-border); color: var(--muted); }
+  .btn-confirm{ background: var(--green); border:1px solid var(--green); color: #06140E; }
+  .btn-confirm:active, .btn-cancel:active{ opacity:0.8; }
+
+  .quitada-banner{
+    background: rgba(62,207,142,0.1); border: 1px solid var(--green-deep);
+    border-radius: 14px; padding: 14px; margin: 14px 0; text-align:center;
+  }
+  .quitada-banner .title{ font-weight:800; font-size:13.5px; color: var(--green); margin-bottom:8px; }
+  .btn-danger{
+    border: 1px solid var(--danger); color: var(--danger); border-radius: 10px;
+    padding: 9px 14px; font-size:12px; font-weight:700; display:inline-block; cursor:pointer;
+  }
+  .saque-row{ display:flex; justify-content:space-between; font-size:12.5px; padding:9px 0; border-bottom:1px solid var(--card-border); }
+  .saque-row:last-child{ border-bottom:none; }
+
+  /* Tela de login */
+  #login-screen{
+    position:absolute; inset:0; background: var(--bg); z-index: 60;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding: 40px; text-align:center;
+  }
+  #login-screen .login-logo{ width:44px; height:92px; margin-bottom:18px; }
+  #login-screen h1{ font-size:22px; margin:0 0 6px; }
+  #login-screen h1 .c{ color:var(--green); }
+  #login-screen p{ font-size:13px; color:var(--muted); margin:0 0 32px; max-width:260px; line-height:1.5; }
+  .google-btn{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    background:#fff; color:#1F1F1F; font-weight:700; font-size:14px;
+    border-radius:12px; padding:13px 20px; cursor:pointer; border:none;
+  }
+  .google-btn svg{ width:18px; height:18px; }
+  .google-btn:active{ opacity:0.85; }
+  #login-error{ color:var(--danger); font-size:12px; margin-top:16px; max-width:260px; }
+  #splash{
+    position:absolute; inset:0; background: var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    z-index: 50; transition: opacity .5s ease;
+  }
+  #splash.splash-hide{ opacity:0; pointer-events:none; }
+  .morph-svg{ width: 320px; height: 134px; overflow: visible; display:block; }
+  .morph-piece{
+    transform-box: fill-box; transform-origin: 50% 50%;
+    animation-duration: 1.4s; animation-delay: 1.9s;
+    animation-timing-function: cubic-bezier(.5,0,.2,1);
+    animation-fill-mode: both;
+  }
+  .mp1{ animation-name: f_stem; } .mp2{ animation-name: f_top; } .mp3{ animation-name: f_mid; }
+  .mp4{ animation-name: i_bar; } .mp5{ animation-name: n_left; } .mp6{ animation-name: n_right; }
+  .mp8{ animation-name: c_top; } .mp9{ animation-name: c_left; } .mp10{ animation-name: c_bottom; }
+  @keyframes f_stem{ 0%{ x:8px; y:23px; width:13px; height:54px; rx:2px; fill:var(--ink); } 100%{ x:38px; y:52px; width:26px; height:24px; rx:6px; fill:var(--green); } }
+  @keyframes f_top{ 0%{ x:8px; y:23px; width:38px; height:13px; rx:2px; fill:var(--ink); } 100%{ x:41px; y:34px; width:20px; height:14px; rx:5px; fill:var(--green); fill-opacity:0.65; } }
+  @keyframes f_mid{ 0%{ x:8px; y:45px; width:28px; height:12px; rx:2px; fill:var(--ink); } 100%{ x:45.8px; y:20.8px; width:6.4px; height:6.4px; rx:3.2px; fill:var(--green); fill-opacity:0.5; } }
+  @keyframes i_bar{ 0%{ x:54px; y:23px; width:13px; height:54px; rx:2px; fill:var(--ink); } 100%{ x:38px; y:52px; width:26px; height:24px; rx:6px; fill:var(--green); } }
+  @keyframes n_left{ 0%{ x:75px; y:23px; width:13px; height:54px; rx:0px; fill:var(--ink); } 100%{ x:41px; y:34px; width:20px; height:14px; rx:5px; fill:var(--green); fill-opacity:0.65; } }
+  @keyframes n_right{ 0%{ x:100px; y:23px; width:13px; height:54px; rx:0px; fill:var(--ink); } 100%{ x:57.7px; y:16.7px; width:4.6px; height:4.6px; rx:2.3px; fill:var(--green); fill-opacity:0.38; } }
+  @keyframes c_top{ 0%{ x:121px; y:23px; width:38px; height:13px; rx:2px; fill:var(--green); } 100%{ x:38px; y:52px; width:26px; height:24px; rx:6px; fill:var(--green); } }
+  @keyframes c_left{ 0%{ x:121px; y:23px; width:13px; height:54px; rx:2px; fill:var(--green); } 100%{ x:41px; y:34px; width:20px; height:14px; rx:5px; fill:var(--green); fill-opacity:0.65; } }
+  @keyframes c_bottom{ 0%{ x:121px; y:64px; width:38px; height:13px; rx:2px; fill:var(--green); } 100%{ x:64.7px; y:26.7px; width:2.6px; height:2.6px; rx:1.3px; fill:var(--green); fill-opacity:0.18; } }
+</style>
+</head>
+<body>
+
+<div id="shell">
+  <div id="login-screen" style="display:none;">
+    <svg class="login-logo" viewBox="34 6 38 74">
+      <rect x="38" y="52" width="26" height="24" rx="6" fill="var(--green)"/>
+      <rect x="41" y="34" width="20" height="14" rx="5" fill="var(--green)" opacity="0.65"/>
+      <circle cx="49" cy="24" r="3.2" fill="var(--green)" opacity="0.5"/>
+      <circle cx="60" cy="19" r="2.3" fill="var(--green)" opacity="0.38"/>
+      <circle cx="54" cy="12" r="1.7" fill="var(--green)" opacity="0.26"/>
+      <circle cx="66" cy="28" r="1.3" fill="var(--green)" opacity="0.18"/>
+    </svg>
+    <h1>FIN<span class="c">C</span></h1>
+    <p>Controle sem complexidade. Entre com sua conta Google pra acessar seus dados em qualquer aparelho.</p>
+    <button class="google-btn" onclick="signIn()">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35 24 35c-6.1 0-11-4.9-11-11s4.9-11 11-11c2.8 0 5.3 1 7.3 2.7l6-6C33.6 6.5 29 4.5 24 4.5 12.7 4.5 3.5 13.7 3.5 25S12.7 45.5 24 45.5 44.5 36.3 44.5 25c0-1.6-.2-3.1-.9-4.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.9 18.9 13 24 13c2.8 0 5.3 1 7.3 2.7l6-6C33.6 6.5 29 4.5 24 4.5c-7.6 0-14.1 4.3-17.4 10.6z"/><path fill="#4CAF50" d="M24 45.5c5.2 0 9.9-1.7 13.4-4.7l-6.2-5.2C29.3 37.4 26.8 38 24 38c-5.3 0-9.7-3.4-11.3-8.1l-6.6 5.1C9.6 41.1 16.2 45.5 24 45.5z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.3 4.3-4.1 5.6l6.2 5.2C40.9 36.2 44.5 31.1 44.5 25c0-1.6-.2-3.1-.9-4.5z"/></svg>
+      Entrar com Google
+    </button>
+    <div id="login-error"></div>
+  </div>
+  <div id="splash">
+    <svg class="morph-svg" viewBox="0 15 167 70">
+      <rect class="morph-piece mp1" x="8" y="23" width="13" height="54" rx="2"/>
+      <rect class="morph-piece mp2" x="8" y="23" width="38" height="13" rx="2"/>
+      <rect class="morph-piece mp3" x="8" y="45" width="28" height="12" rx="2"/>
+      <rect class="morph-piece mp4" x="54" y="23" width="13" height="54" rx="2"/>
+      <rect class="morph-piece mp5" x="75" y="23" width="13" height="54" rx="0"/>
+      <rect class="morph-piece mp6" x="100" y="23" width="13" height="54" rx="0"/>
+      <polygon points="75,23 91,23 113,77 97,77" fill="#EDEFEC">
+        <animate attributeName="points" from="75,23 91,23 113,77 97,77" to="52.3,10.3 55.7,10.3 55.7,13.7 52.3,13.7" begin="1.9s" dur="1.4s" fill="freeze" calcMode="spline" keySplines="0.5 0 0.2 1"/>
+        <animate attributeName="fill" from="#EDEFEC" to="#3ECF8E" begin="1.9s" dur="1.4s" fill="freeze"/>
+        <animate attributeName="fill-opacity" from="1" to="0.26" begin="1.9s" dur="1.4s" fill="freeze"/>
+      </polygon>
+      <rect class="morph-piece mp8" x="121" y="23" width="38" height="13" rx="2"/>
+      <rect class="morph-piece mp9" x="121" y="23" width="13" height="54" rx="2"/>
+      <rect class="morph-piece mp10" x="121" y="64" width="38" height="13" rx="2"/>
+    </svg>
+  </div>
+  <div id="content"></div>
+  <div class="navbar" id="navbar">
+    <div class="navitem" data-nav="home"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg></div>Início</div>
+    <div class="navitem" data-nav="credores"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg></div>Contas</div>
+    <div class="navitem" data-nav="perfil"><div class="nav-icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg></div>Perfil</div>
+  </div>
+</div>
+
+<script>
+const LOGO_SVG = `<svg viewBox="34 6 38 74">
+  <rect x="38" y="52" width="26" height="24" rx="6" fill="var(--green)"/>
+  <rect x="41" y="34" width="20" height="14" rx="5" fill="var(--green)" opacity="0.65"/>
+  <circle cx="49" cy="24" r="3.2" fill="var(--green)" opacity="0.5"/>
+  <circle cx="60" cy="19" r="2.3" fill="var(--green)" opacity="0.38"/>
+  <circle cx="54" cy="12" r="1.7" fill="var(--green)" opacity="0.26"/>
+  <circle cx="66" cy="28" r="1.3" fill="var(--green)" opacity="0.18"/>
+</svg>`;
+
+let state = {
+  view: 'home',
+  selectedCredorId: null,
+  selectedDividaId: null,
+  modal: null,
+  credores: [],
+  loaded: false
+};
+
+function uid(){ return Math.random().toString(36).slice(2,10); }
+
+function fmtMoney(v){
+  return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+// ======================================================================
+// CONFIGURAÇÃO DO FIREBASE
+// Troque os valores abaixo pelos do SEU projeto Firebase (veja o README.md
+// na pasta do projeto para o passo a passo de onde pegar esses dados).
+// ======================================================================
+const firebaseConfig = {
+  apiKey: "COLE_AQUI_SUA_API_KEY",
+  authDomain: "COLE_AQUI.firebaseapp.com",
+  projectId: "COLE_AQUI_SEU_PROJECT_ID",
+  storageBucket: "COLE_AQUI.appspot.com",
+  messagingSenderId: "COLE_AQUI",
+  appId: "COLE_AQUI"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+let currentUser = null;
+
+function signIn(){
+  document.getElementById('login-error').textContent = '';
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider).catch((err)=>{
+    document.getElementById('login-error').textContent = 'Não foi possível entrar. Tente novamente.';
+    console.error(err);
+  });
+}
+
+function signOutUser(){
+  auth.signOut();
+}
+
+auth.onAuthStateChanged((user)=>{
+  const loginScreen = document.getElementById('login-screen');
+  if(user){
+    currentUser = user;
+    loginScreen.style.display = 'none';
+    loadData();
+  } else {
+    currentUser = null;
+    state.loaded = false;
+    loginScreen.style.display = 'flex';
+  }
+});
+
+function makeParcelas(labels, valor){
+  return labels.map(label => ({ id: uid(), label, valor, pago: false }));
+}
+
+function buildSeedData(){
+  const hoje = new Date();
+
+  function gerarParcelasComData(qtd, valor, vencimentoDia, mesesAFrente=0){
+    const arr = [];
+    for(let i=0;i<qtd;i++){
+      const alvo = hoje.getMonth() + mesesAFrente + i;
+      const y = hoje.getFullYear() + Math.floor(alvo/12);
+      const m = ((alvo%12)+12)%12;
+      const day = Math.min(vencimentoDia, daysInMonth(y,m));
+      arr.push({
+        id: uid(), label: MESES_ABR[m]+'/'+String(y).slice(2), valor,
+        pago:false, dataVenc: `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
+      });
+    }
+    return arr;
+  }
+
+  const diaVencProximo = hoje.getDate() + 4 > 28 ? (hoje.getDate()+4-28) : hoje.getDate()+4;
+  const financiamentoParcelas = gerarParcelasComData(6, 385.00, diaVencProximo, 0);
+
+  const cartaoParcelas = gerarParcelasComData(10, 179.10, 5, -2);
+  cartaoParcelas.forEach((p,i)=>{ if(i<7) p.pago = true; });
+
+  const quitadaParcelas = makeParcelas(Array.from({length:10}, (_,i)=>'Parcela '+(i+1)), 539.00);
+  quitadaParcelas.forEach(p=>{ p.pago = true; });
+
+  return [{
+    id: uid(),
+    nome: 'Banco Exemplo',
+    dividas: [
+      {
+        id: uid(), nome: 'Financiamento', tipo: 'financiamento', tipoLabel: 'Financiamento', temVencimento: true, vencimentoDia: diaVencProximo,
+        parcelas: financiamentoParcelas, saques: []
+      },
+      {
+        id: uid(), nome: 'Cartão', tipo: 'cartao', tipoLabel: 'Cartão', temVencimento: true, vencimentoDia: 5,
+        parcelas: cartaoParcelas, saques: []
+      },
+      {
+        id: uid(), nome: 'Empréstimo quitado', tipo: 'emprestimo', tipoLabel: 'Empréstimo', temVencimento: false, vencimentoDia: null,
+        parcelas: quitadaParcelas, saques: []
+      }
+    ]
+  }];
+}
+
+async function loadData(){
+  if(!currentUser) return;
+  try{
+    const doc = await db.collection('users').doc(currentUser.uid).collection('data').doc('credores').get();
+    state.credores = doc.exists && doc.data().credores ? doc.data().credores : [];
+  }catch(e){
+    console.error('Erro ao carregar dados', e);
+    state.credores = [];
+  }
+  state.loaded = true;
+  render();
+}
+
+async function saveData(){
+  if(!currentUser) return;
+  try{
+    await db.collection('users').doc(currentUser.uid).collection('data').doc('credores')
+      .set({ credores: state.credores, atualizadoEm: new Date().toISOString() });
+  }catch(e){ console.error('Erro ao salvar', e); }
+}
+
+// ---------- Computations ----------
+function dividaSaldo(divida){
+  return divida.parcelas.filter(p=>!p.pago).reduce((s,p)=>s+p.valor,0);
+}
+function credorSaldo(credor){
+  return credor.dividas.reduce((s,d)=>s+dividaSaldo(d),0);
+}
+function totalSaldo(){
+  return state.credores.reduce((s,c)=>s+credorSaldo(c),0);
+}
+function overallProgress(){
+  let totalVal=0, paidVal=0;
+  state.credores.forEach(c=>c.dividas.forEach(d=>{
+    d.parcelas.forEach(p=>{ totalVal+=p.valor; if(p.pago) paidVal+=p.valor; });
+  }));
+  if(totalVal===0) return 0;
+  return Math.round((paidVal/totalVal)*100);
+}
+function greetingText(){
+  const h = new Date().getHours();
+  if(h<12) return 'Bom dia';
+  if(h<18) return 'Boa tarde';
+  return 'Boa noite';
+}
+
+const MESES_ABR = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+
+const DIAS_SEMANA = ['domingo','segunda-feira','terça-feira','quarta-feira','quinta-feira','sexta-feira','sábado'];
+
+function nextDueInfo(){
+  let candidates = [];
+  state.credores.forEach(c=>c.dividas.forEach(d=>{
+    if(!d.temVencimento) return;
+    const pendente = d.parcelas.find(p=>!p.pago && p.dataVenc);
+    if(pendente){
+      candidates.push({
+        credorId: c.id, dividaId: d.id, dividaNome: d.nome,
+        valor: pendente.valor, dataVenc: pendente.dataVenc,
+        pendentesCount: d.parcelas.filter(p=>!p.pago).length
+      });
+    }
+  }));
+  if(!candidates.length) return null;
+  const today = new Date(); today.setHours(0,0,0,0);
+  candidates.forEach(c=>{
+    const [y,m,dday] = c.dataVenc.split('-').map(Number);
+    c.due = new Date(y, m-1, dday);
+    c.diffDays = Math.ceil((c.due - today) / (1000*60*60*24));
+  });
+  candidates.sort((a,b)=>a.due-b.due);
+  return candidates[0];
+}
+
+function motivationalMessage(pendingCount, progress){
+  const day = new Date().getDate();
+  const templates = [
+    `Faltam apenas ${pendingCount} parcela${pendingCount===1?'':'s'} para concluir seus compromissos.`,
+    `Você está mais perto da sua organização financeira.`,
+    `Continue assim. Você já concluiu ${progress}% deste mês.`,
+    `Mais um pagamento e você estará ainda mais próximo do fim.`
+  ];
+  return templates[day % templates.length];
+}
+
+// ---------- Actions ----------
+function addCredor(nome){
+  state.credores.push({ id: uid(), nome, dividas: [] });
+  saveData(); render();
+}
+function renameCredor(id, novoNome){
+  const c = state.credores.find(c=>c.id===id);
+  if(c) c.nome = novoNome;
+  saveData(); render();
+}
+function daysInMonth(year, monthIndex){
+  return new Date(year, monthIndex+1, 0).getDate();
+}
+function addDivida(credorId, opts){
+  const c = state.credores.find(c=>c.id===credorId);
+  if(!c) return;
+  const parcelas = [];
+  let baseYear, baseMonth;
+  if(opts.temVencimento && opts.mesInicio){
+    const [y,m] = opts.mesInicio.split('-').map(Number);
+    baseYear = y; baseMonth = m-1;
+  }
+  for(let i=0;i<opts.qtdParcelas;i++){
+    const parcela = { id: uid(), label: 'Parcela ' + (i+1), valor: opts.valorParcela, pago: false };
+    if(opts.temVencimento && baseYear!==undefined){
+      const targetMonth = baseMonth + i;
+      const y = baseYear + Math.floor(targetMonth/12);
+      const m = ((targetMonth%12)+12)%12;
+      const day = Math.min(opts.vencimentoDia, daysInMonth(y,m));
+      parcela.dataVenc = `${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      parcela.label = MESES_ABR[m] + '/' + String(y).slice(2);
+    }
+    parcelas.push(parcela);
+  }
+  c.dividas.push({
+    id: uid(), nome: opts.nome, tipo: opts.tipo, tipoLabel: opts.tipoLabel, temVencimento: opts.temVencimento,
+    vencimentoDia: opts.temVencimento ? opts.vencimentoDia : null,
+    parcelas, saques: []
+  });
+  saveData(); render();
+}
+function renameDivida(credorId, dividaId, novoNome){
+  const c = state.credores.find(c=>c.id===credorId);
+  const d = c && c.dividas.find(d=>d.id===dividaId);
+  if(d) d.nome = novoNome;
+  saveData(); render();
+}
+function togglePago(credorId, dividaId, parcelaId){
+  const c = state.credores.find(c=>c.id===credorId);
+  const d = c && c.dividas.find(d=>d.id===dividaId);
+  const p = d && d.parcelas.find(p=>p.id===parcelaId);
+  if(p) p.pago = !p.pago;
+  saveData(); render();
+}
+function editParcelaValor(credorId, dividaId, parcelaId, novoValor){
+  const c = state.credores.find(c=>c.id===credorId);
+  const d = c && c.dividas.find(d=>d.id===dividaId);
+  const p = d && d.parcelas.find(p=>p.id===parcelaId);
+  if(p) p.valor = novoValor;
+  saveData(); render();
+}
+function addSaque(credorId, dividaId, valor, data){
+  const c = state.credores.find(c=>c.id===credorId);
+  const d = c && c.dividas.find(d=>d.id===dividaId);
+  if(d) d.saques.push({ id: uid(), valor, data });
+  saveData(); render();
+}
+
+// ---------- Navigation ----------
+function goTo(view, extra){
+  state.view = view;
+  if(extra) Object.assign(state, extra);
+  render();
+}
+
+// ---------- Modals ----------
+function openModal(type, ctx){
+  state.modal = { type, ctx: ctx||{} };
+  render();
+}
+function closeModal(){
+  state.modal = null;
+  render();
+}
+
+function renderModal(){
+  if(!state.modal) return '';
+  const {type, ctx} = state.modal;
+
+  if(type==='addCredor' || type==='renameCredor'){
+    const isRename = type==='renameCredor';
+    return `
+      <div id="modal-overlay">
+        <div class="modal-sheet">
+          <div class="modal-title">${isRename? 'Renomear credor' : 'Novo credor'}</div>
+          <div class="field-label">Nome</div>
+          <input class="field-input" id="m-nome" value="${isRename? ctx.nomeAtual : ''}" placeholder="Ex: Banco, Cartão, Fulano...">
+          <div class="modal-btns">
+            <div class="btn btn-cancel" onclick="closeModal()">Cancelar</div>
+            <div class="btn btn-confirm" onclick="submitCredorModal('${type}', '${ctx.id||''}')">Salvar</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  if(type==='renameDivida'){
+    return `
+      <div id="modal-overlay">
+        <div class="modal-sheet">
+          <div class="modal-title">Renomear conta</div>
+          <div class="field-label">Nome</div>
+          <input class="field-input" id="m-nome" value="${ctx.nomeAtual}" placeholder="Ex: Empréstimo, Cartão...">
+          <div class="modal-btns">
+            <div class="btn btn-cancel" onclick="closeModal()">Cancelar</div>
+            <div class="btn btn-confirm" onclick="submitRenameDivida('${ctx.credorId}','${ctx.dividaId}')">Salvar</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  if(type==='addDivida'){
+    return `
+      <div id="modal-overlay">
+        <div class="modal-sheet">
+          <div class="modal-title">Nova conta</div>
+          <div class="field-label">Nome</div>
+          <input class="field-input" id="m-nome" placeholder="Ex: Empréstimo, Cartão...">
+          <div class="field-label">Tipo</div>
+          <select class="field-input" id="m-tipo" onchange="
+            document.getElementById('m-tipo-custom-wrap').style.display = this.value==='outro' ? 'block' : 'none';
+            document.getElementById('m-qtd-wrap').style.display = this.value==='assinatura' ? 'none' : 'block';
+            document.getElementById('m-assinatura-note').style.display = this.value==='assinatura' ? 'block' : 'none';
+          ">
+            <option value="emprestimo">Empréstimo</option>
+            <option value="cartao">Cartão</option>
+            <option value="financiamento">Financiamento</option>
+            <option value="assinatura">Assinatura</option>
+            <option value="outro">Outro (personalizado)</option>
+          </select>
+          <div id="m-tipo-custom-wrap" style="display:none;">
+            <div class="field-label">Nome do tipo</div>
+            <input class="field-input" id="m-tipo-custom" placeholder="Ex: Financiamento de veículo">
+          </div>
+          <div class="toggle-row">
+            <span class="lbl">Tem vencimento fixo?</span>
+            <div class="switch on" id="m-temvenc-switch" onclick="this.classList.toggle('on'); document.getElementById('m-venc-wrap').style.display = this.classList.contains('on') ? 'block' : 'none';"><div class="knob"></div></div>
+          </div>
+          <div id="m-venc-wrap">
+            <div class="field-label">Dia do vencimento</div>
+            <input class="field-input" id="m-venc" type="number" min="1" max="31" placeholder="Ex: 20">
+            <div class="field-label">Mês da primeira parcela</div>
+            <input class="field-input" id="m-mes-inicio" type="month">
+          </div>
+          <div class="field-label">Valor da parcela</div>
+          <input class="field-input" id="m-valor" type="number" step="0.01" placeholder="Ex: 255.44">
+          <div id="m-qtd-wrap">
+            <div class="field-label">Quantidade de parcelas</div>
+            <input class="field-input" id="m-qtd" type="number" min="1" placeholder="Ex: 12">
+          </div>
+          <div id="m-assinatura-note" style="display:none;" class="mini-note">Assinatura recorrente — continua até você excluir quando cancelar.</div>
+          <div class="modal-btns">
+            <div class="btn btn-cancel" onclick="closeModal()">Cancelar</div>
+            <div class="btn btn-confirm" onclick="submitAddDivida('${ctx.credorId}')">Salvar</div>
+          </div>
+        </div>
+      </div>`;
+  }
+
+  if(type==='addSaque'){
+    return `
+      <div id="modal-overlay">
+        <div class="modal-sheet">
+          <div class="modal-title">Novo saque</div>
+          <div class="field-label">Valor</div>
+          <input class="field-input" id="m-valor" type="number" step="0.01" placeholder="Ex: 1000">
+          <div class="field-label">Data</div>
+          <input class="field-input" id="m-data" type="date">
+          <div class="modal-btns">
+            <div class="btn btn-cancel" onclick="closeModal()">Cancelar</div>
+            <div class="btn btn-confirm" onclick="submitAddSaque('${ctx.credorId}','${ctx.dividaId}')">Salvar</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  if(type==='editParcela'){
+    return `
+      <div id="modal-overlay">
+        <div class="modal-sheet">
+          <div class="modal-title">Ajustar valor da parcela</div>
+          <div class="field-label">Valor</div>
+          <input class="field-input" id="m-valor" type="number" step="0.01" value="${ctx.valorAtual}">
+          <div class="modal-btns">
+            <div class="btn btn-cancel" onclick="closeModal()">Cancelar</div>
+            <div class="btn btn-confirm" onclick="submitEditParcela('${ctx.credorId}','${ctx.dividaId}','${ctx.parcelaId}')">Salvar</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  if(type==='confirmDelete'){
+    return `
+      <div id="modal-overlay">
+        <div class="modal-sheet">
+          <div class="modal-title">Excluir "${ctx.nome}"?</div>
+          <div class="mini-note" style="margin:0 0 4px; text-align:left;">Essa ação não pode ser desfeita.</div>
+          <div class="modal-btns">
+            <div class="btn btn-cancel" onclick="closeModal()">Cancelar</div>
+            <div class="btn" style="background:var(--danger); color:#fff;" onclick="deleteDivida('${ctx.credorId}','${ctx.dividaId}'); closeModal();">Excluir</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  if(type==='confirmClearAll'){
+    return `
+      <div id="modal-overlay">
+        <div class="modal-sheet">
+          <div class="modal-title">Limpar todos os dados?</div>
+          <div class="mini-note" style="margin:0 0 4px; text-align:left;">Isso remove todos os credores e contas cadastrados agora. Essa ação não pode ser desfeita.</div>
+          <div class="modal-btns">
+            <div class="btn btn-cancel" onclick="closeModal()">Cancelar</div>
+            <div class="btn" style="background:var(--danger); color:#fff;" onclick="clearAllData();">Limpar tudo</div>
+          </div>
+        </div>
+      </div>`;
+  }
+  return '';
+}
+
+function submitCredorModal(type, id){
+  const nome = document.getElementById('m-nome').value.trim();
+  if(!nome) return;
+  if(type==='addCredor') addCredor(nome);
+  else renameCredor(id, nome);
+  closeModal();
+}
+function submitRenameDivida(credorId, dividaId){
+  const nome = document.getElementById('m-nome').value.trim();
+  if(!nome) return;
+  renameDivida(credorId, dividaId, nome);
+  closeModal();
+}
+function submitAddDivida(credorId){
+  const nome = document.getElementById('m-nome').value.trim();
+  let tipo = document.getElementById('m-tipo').value;
+  let tipoLabel = { emprestimo:'Empréstimo', cartao:'Cartão', financiamento:'Financiamento', assinatura:'Assinatura' }[tipo] || '';
+  if(tipo==='outro'){
+    const custom = document.getElementById('m-tipo-custom').value.trim();
+    if(!custom) return;
+    tipoLabel = custom;
+  }
+  const temVencimento = document.getElementById('m-temvenc-switch').classList.contains('on');
+  const vencimentoDia = parseInt(document.getElementById('m-venc').value) || null;
+  const mesInicio = document.getElementById('m-mes-inicio').value;
+  const valorParcela = parseFloat(document.getElementById('m-valor').value);
+  const qtdParcelas = tipo==='assinatura' ? 24 : parseInt(document.getElementById('m-qtd').value);
+  if(!nome || !valorParcela || !qtdParcelas) return;
+  addDivida(credorId, {nome, tipo, tipoLabel, temVencimento, vencimentoDia, mesInicio, valorParcela, qtdParcelas});
+  closeModal();
+}
+function submitEditParcela(credorId, dividaId, parcelaId){
+  const valor = parseFloat(document.getElementById('m-valor').value);
+  if(!valor) return;
+  editParcelaValor(credorId, dividaId, parcelaId, valor);
+  closeModal();
+}
+async function clearAllData(){
+  state.credores = [];
+  await saveData();
+  state.modal = null;
+  goTo('home');
+}
+function deleteDivida(credorId, dividaId){
+  const c = state.credores.find(c=>c.id===credorId);
+  if(!c) return;
+  c.dividas = c.dividas.filter(d=>d.id!==dividaId);
+  saveData();
+  goTo('credorDetail', {selectedCredorId: credorId});
+}
+function submitAddSaque(credorId, dividaId){
+  const valor = parseFloat(document.getElementById('m-valor').value);
+  const data = document.getElementById('m-data').value;
+  if(!valor || !data) return;
+  const partes = data.split('-');
+  const dataFmt = partes[2]+'/'+partes[1]+'/'+partes[0].slice(2);
+  addSaque(credorId, dividaId, valor, dataFmt);
+  closeModal();
+}
+
+// ---------- Views ----------
+function viewHome(){
+  const total = totalSaldo();
+  const progress = overallProgress();
+  const circumference = 2*Math.PI*30;
+  const offset = circumference - (progress/100)*circumference;
+  const proximo = nextDueInfo();
+
+  return `
+    ${renderTopbar()}
+    <div class="greeting-line" style="font-size:23px;">${greetingText()}, <span class="name-green">Edmundo</span></div>
+    <div class="subtitle">Aqui está o seu panorama financeiro.</div>
+
+    <div class="hero-card">
+      <div class="status-row">
+        <div class="ring-mini">
+          <svg viewBox="0 0 68 68">
+            <circle class="ring-track" cx="34" cy="34" r="30"/>
+            <circle class="ring-fill" cx="34" cy="34" r="30" stroke-dasharray="${circumference}" stroke-dashoffset="${offset}"/>
+          </svg>
+          <div class="pct">${progress}%<span>concluído</span></div>
+        </div>
+        <div class="status-text">
+          ${ total>0 ? `
+          <div class="status-check"><span class="check-bubble"><svg viewBox="0 0 24 24" fill="none" stroke="#06140E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>Você está no caminho certo!</div>
+          <div class="status-desc">${progress}% dos compromissos já foram concluídos.</div>
+          ` : `<div class="status-check"><span class="check-bubble"><svg viewBox="0 0 24 24" fill="none" stroke="#06140E" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></span>Tudo em dia por aqui!</div>` }
+        </div>
+      </div>
+      <div class="hero-divider"></div>
+      <div class="hero-bottom-row" onclick="goTo('credores')">
+        <div>
+          <div class="hero-label" style="margin-bottom:2px;">Compromissos ativos</div>
+          <div class="hero-number" style="font-size:22px; margin-bottom:0;">${fmtMoney(total)}</div>
+        </div>
+        <div class="chev-btn">›</div>
+      </div>
+    </div>
+
+    ${ proximo ? `
+    <div class="compromisso-label">Próximo compromisso</div>
+    <div class="pc-card" onclick="goTo('dividaDetail', {selectedCredorId:'${proximo.credorId}', selectedDividaId:'${proximo.dividaId}'})">
+      <div class="pc-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg>
+      </div>
+      <div class="pc-mid">
+        <div class="pc-label">Próximo vencimento</div>
+        <div class="pc-date">${proximo.due.getDate()} de ${MESES_ABR[proximo.due.getMonth()][0]}${MESES_ABR[proximo.due.getMonth()].slice(1).toLowerCase()}</div>
+        <div class="pc-weekday">${DIAS_SEMANA[proximo.due.getDay()]} · <span style="color:var(--green); font-weight:700;">${proximo.diffDays===0?'hoje':proximo.diffDays<0?'atrasado':'em '+proximo.diffDays+' dia'+(proximo.diffDays===1?'':'s')}</span></div>
+      </div>
+      <div class="pc-divider"></div>
+      <div class="pc-right">
+        <div class="pc-label">Valor da parcela</div>
+        <div class="pc-valor">${fmtMoney(proximo.valor)}</div>
+      </div>
+      <div class="chev-btn">›</div>
+    </div>
+
+    <div class="motiv-card">
+      <svg width="64" height="64" viewBox="34 6 38 74" style="flex-shrink:0;">
+        <rect x="38" y="52" width="26" height="24" rx="6" fill="var(--green)"/>
+        <rect x="41" y="34" width="20" height="14" rx="5" fill="var(--green)" opacity="0.65"/>
+        <circle cx="49" cy="24" r="3.2" fill="var(--green)" opacity="0.5"/>
+        <circle cx="60" cy="19" r="2.3" fill="var(--green)" opacity="0.38"/>
+        <circle cx="54" cy="12" r="1.7" fill="var(--green)" opacity="0.26"/>
+        <circle cx="66" cy="28" r="1.3" fill="var(--green)" opacity="0.18"/>
+      </svg>
+      <div class="motiv-text">
+        ${motivationalMessage(proximo.pendentesCount, progress)}
+        <div class="motiv-sub">Você está mais perto da sua liberdade financeira!</div>
+      </div>
+    </div>
+    ` : '' }
+
+    <div class="quick-label">Acesso rápido</div>
+    <div class="quick-grid">
+      <div class="quick-card" onclick="goTo('credores')">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></div>
+          <span style="color:var(--muted); font-size:13px;">›</span>
+        </div>
+        <div class="quick-title">Ver contas</div>
+        <div class="quick-sub">Contas e parcelas</div>
+      </div>
+      <div class="quick-card" onclick="goTo('calendario')">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M8 3v4"/><path d="M16 3v4"/></svg></div>
+          <span style="color:var(--muted); font-size:13px;">›</span>
+        </div>
+        <div class="quick-title">Calendário</div>
+        <div class="quick-sub">Veja todos os vencimentos</div>
+      </div>
+      <div class="quick-card" onclick="goTo('resumo')">
+        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+          <div class="quick-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div>
+          <span style="color:var(--muted); font-size:13px;">›</span>
+        </div>
+        <div class="quick-title">Resumo</div>
+        <div class="quick-sub">Acompanhe sua evolução</div>
+      </div>
+    </div>
+  `;
+}
+
+function viewCalendario(){
+  let itens = [];
+  state.credores.forEach(c=>c.dividas.forEach(d=>{
+    if(!d.temVencimento) return;
+    d.parcelas.filter(p=>!p.pago && p.dataVenc).forEach(p=>{
+      itens.push({ credorNome:c.nome, dividaNome:d.nome, data:p.dataVenc, valor:p.valor,
+        credorId:c.id, dividaId:d.id });
+    });
+  }));
+  itens.sort((a,b)=>a.data.localeCompare(b.data));
+
+  const hojeStr = new Date().toISOString().slice(0,10);
+  const rows = itens.map(it=>{
+    const [y,m,dday] = it.data.split('-').map(Number);
+    const dt = new Date(y,m-1,dday);
+    const atrasada = it.data < hojeStr;
+    return `
+      <div class="card-row ${atrasada?'atrasado':''}" onclick="goTo('dividaDetail', {selectedCredorId:'${it.credorId}', selectedDividaId:'${it.dividaId}'})">
+        <div>
+          <div class="name">${it.dividaNome} <span style="color:var(--muted); font-weight:500;">· ${it.credorNome}</span></div>
+          <div class="meta">${String(dday).padStart(2,'0')} ${MESES_ABR[dt.getMonth()]}/${String(y).slice(2)} · ${DIAS_SEMANA[dt.getDay()]}${atrasada?' · <span style=\"color:var(--danger); font-weight:700;\">atrasado</span>':''}</div>
+        </div>
+        <div class="val">${fmtMoney(it.valor)}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="backbar" onclick="goTo('home')"><span class="arrow">←</span>Calendário</div>
+    ${ itens.length ? rows : `<div class="empty-state">Nenhum vencimento pendente no momento.</div>` }
+  `;
+}
+
+function viewResumo(){
+  const total = totalSaldo();
+  const progress = overallProgress();
+  let totalVal=0, paidVal=0;
+  state.credores.forEach(c=>c.dividas.forEach(d=>d.parcelas.forEach(p=>{
+    totalVal+=p.valor; if(p.pago) paidVal+=p.valor;
+  })));
+
+  const rows = state.credores.map(c=>{
+    const saldo = credorSaldo(c);
+    let credorTotal=0, credorPago=0;
+    c.dividas.forEach(d=>d.parcelas.forEach(p=>{ credorTotal+=p.valor; if(p.pago) credorPago+=p.valor; }));
+    const pctPago = credorTotal>0 ? Math.round((credorPago/credorTotal)*100) : 0;
+    return `
+      <div class="card-row" onclick="goTo('credorDetail', {selectedCredorId:'${c.id}'})">
+        <div style="flex:1;">
+          <div class="name">${c.nome}</div>
+          <div style="height:5px; background:var(--track); border-radius:100px; margin-top:7px; overflow:hidden;">
+            <div style="height:100%; width:${pctPago}%; background:var(--green); border-radius:100px;"></div>
+          </div>
+        </div>
+        <div class="val" style="margin-left:12px;">${fmtMoney(saldo)}</div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="backbar" onclick="goTo('home')"><span class="arrow">←</span>Resumo</div>
+    <div class="hero-card">
+      <div class="hero-label">Progresso geral</div>
+      <div class="hero-number">${progress}%</div>
+      <div class="mini-note" style="margin:0; text-align:left;">${fmtMoney(paidVal)} pagos de ${fmtMoney(totalVal)} no total</div>
+    </div>
+    <div class="section-label">Por credor</div>
+    ${ rows || `<div class="empty-state">Nenhum credor cadastrado ainda.</div>` }
+  `;
+}
+
+function viewPerfil(){
+  const totalContas = state.credores.reduce((s,c)=>s+c.dividas.length,0);
+  const nome = (currentUser && currentUser.displayName) ? currentUser.displayName : 'Você';
+  const email = (currentUser && currentUser.email) ? currentUser.email : '';
+  const foto = currentUser && currentUser.photoURL;
+  const inicial = nome.charAt(0).toUpperCase();
+  return `
+    <div style="display:flex; flex-direction:column; min-height:100%;">
+    ${renderTopbar()}
+    <div class="section-label">Perfil</div>
+    <div class="hero-card" style="text-align:center;">
+      ${ foto
+        ? `<img src="${foto}" style="width:56px; height:56px; border-radius:50%; margin:0 auto 12px; display:block;">`
+        : `<div style="width:56px; height:56px; border-radius:50%; background:rgba(62,207,142,0.15); color:var(--green); display:flex; align-items:center; justify-content:center; font-size:22px; font-weight:800; margin:0 auto 12px;">${inicial}</div>` }
+      <div style="font-size:16px; font-weight:800;">${nome}</div>
+      ${ email ? `<div class="mini-note" style="margin-top:2px;">${email}</div>` : '' }
+      <div class="mini-note" style="margin-top:2px;">${state.credores.length} credor${state.credores.length===1?'':'es'} · ${totalContas} conta${totalContas===1?'':'s'}</div>
+      <div class="btn-danger" style="display:inline-block; margin-top:14px;" onclick="signOutUser()">Sair da conta</div>
+    </div>
+
+    <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" style="display:block; flex:1; min-height:260px;">
+      <circle cx="6" cy="5" r="0.35" fill="#fff" opacity="0.35"/>
+      <circle cx="14" cy="11" r="0.25" fill="#fff" opacity="0.25"/>
+      <circle cx="9" cy="19" r="0.4" fill="#fff" opacity="0.3"/>
+      <circle cx="20" cy="3" r="0.3" fill="#fff" opacity="0.4"/>
+      <circle cx="4" cy="29" r="0.3" fill="#fff" opacity="0.25"/>
+      <circle cx="13" cy="36" r="0.45" fill="#fff" opacity="0.35"/>
+      <circle cx="24" cy="42" r="0.3" fill="#fff" opacity="0.3"/>
+      <circle cx="8" cy="46" r="0.4" fill="#fff" opacity="0.3"/>
+      <circle cx="36" cy="45" r="0.3" fill="#fff" opacity="0.25"/>
+      <circle cx="33" cy="4" r="0.3" fill="#fff" opacity="0.3"/>
+      <circle cx="60" cy="3" r="0.35" fill="#fff" opacity="0.35"/>
+      <circle cx="70" cy="6" r="0.4" fill="#fff" opacity="0.3"/>
+      <circle cx="83" cy="4" r="0.3" fill="#fff" opacity="0.3"/>
+      <circle cx="91" cy="8" r="0.45" fill="#fff" opacity="0.35"/>
+      <circle cx="96" cy="15" r="0.3" fill="#fff" opacity="0.25"/>
+      <circle cx="94" cy="28" r="0.3" fill="#fff" opacity="0.3"/>
+      <circle cx="86" cy="34" r="0.35" fill="#fff" opacity="0.3"/>
+      <circle cx="91" cy="40" r="0.45" fill="#fff" opacity="0.35"/>
+      <circle cx="80" cy="45" r="0.3" fill="#fff" opacity="0.25"/>
+      <circle cx="55" cy="44" r="0.25" fill="#fff" opacity="0.25"/>
+      <circle cx="17" cy="55" r="0.3" fill="#fff" opacity="0.3"/>
+      <circle cx="6" cy="63" r="0.35" fill="#fff" opacity="0.3"/>
+      <circle cx="28" cy="60" r="0.4" fill="#fff" opacity="0.3"/>
+      <circle cx="12" cy="72" r="0.3" fill="#fff" opacity="0.25"/>
+      <circle cx="22" cy="80" r="0.45" fill="#fff" opacity="0.35"/>
+      <circle cx="9" cy="88" r="0.3" fill="#fff" opacity="0.3"/>
+      <circle cx="34" cy="90" r="0.3" fill="#fff" opacity="0.25"/>
+      <circle cx="4" cy="95" r="0.35" fill="#fff" opacity="0.3"/>
+      <circle cx="65" cy="58" r="0.3" fill="#fff" opacity="0.25"/>
+      <circle cx="88" cy="62" r="0.4" fill="#fff" opacity="0.3"/>
+      <circle cx="95" cy="72" r="0.3" fill="#fff" opacity="0.25"/>
+      <circle cx="78" cy="78" r="0.35" fill="#fff" opacity="0.3"/>
+      <circle cx="91" cy="88" r="0.45" fill="#fff" opacity="0.35"/>
+      <circle cx="60" cy="90" r="0.3" fill="#fff" opacity="0.25"/>
+      <circle cx="70" cy="95" r="0.3" fill="#fff" opacity="0.3"/>
+      <circle cx="45" cy="70" r="0.3" fill="#fff" opacity="0.2"/>
+      <circle cx="52" cy="82" r="0.25" fill="#fff" opacity="0.2"/>
+
+      <!-- o logo, só como um punhado de partículas mais vivas, sem forma sólida -->
+      <circle cx="48" cy="46" r="0.9" fill="var(--green)" opacity="0.55"/>
+      <circle cx="52" cy="40" r="0.7" fill="var(--green)" opacity="0.5"/>
+      <circle cx="45" cy="36" r="0.6" fill="var(--green)" opacity="0.45"/>
+      <circle cx="55" cy="33" r="0.5" fill="var(--green)" opacity="0.4"/>
+      <circle cx="49" cy="30" r="0.4" fill="var(--green)" opacity="0.35"/>
+      <circle cx="58" cy="44" r="0.4" fill="var(--green)" opacity="0.3"/>
+      <circle cx="43" cy="43" r="0.35" fill="var(--green)" opacity="0.3"/>
+      <circle cx="50" cy="55" r="0.5" fill="var(--green)" opacity="0.4"/>
+      <circle cx="60" cy="52" r="0.4" fill="var(--green)" opacity="0.3"/>
+      <circle cx="40" cy="52" r="0.35" fill="var(--green)" opacity="0.3"/>
+    </svg>
+
+    <div style="border-top:1px solid var(--card-border); margin:0 0 12px;"></div>
+    <div style="font-size:11.5px; color:var(--muted);">Finc v1.0</div>
+    <div style="font-size:11.5px; color:var(--muted); margin-top:2px;">Desenvolvido por Edmundo Oliveira</div>
+    </div>
+  `;
+}
+function renderTopbar(){
+  return `
+    <div class="app-topbar">
+      <div class="left">
+        <div class="hamburger" onclick="openMenu()"><span></span><span></span><span></span></div>
+        <div style="display:flex; align-items:flex-end; gap:2px;">
+          <svg class="topbar-logo" viewBox="34 6 38 74">
+            <rect x="38" y="52" width="26" height="24" rx="6" fill="var(--green)"/>
+            <rect x="41" y="34" width="20" height="14" rx="5" fill="var(--green)" opacity="0.65"/>
+            <circle cx="49" cy="24" r="3.2" fill="var(--green)" opacity="0.5"/>
+            <circle cx="60" cy="19" r="2.3" fill="var(--green)" opacity="0.38"/>
+            <circle cx="54" cy="12" r="1.7" fill="var(--green)" opacity="0.26"/>
+            <circle cx="66" cy="28" r="1.3" fill="var(--green)" opacity="0.18"/>
+          </svg>
+          <span class="topbar-word">FIN<span class="c">C</span></span>
+        </div>
+      </div>
+      <div class="bell-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>
+        <span class="dot"></span>
+      </div>
+    </div>
+  `;
+}
+
+function viewConfiguracoes(){
+  return `
+    <div class="backbar" onclick="goTo('home')"><span class="arrow">←</span>Configurações</div>
+
+    <div class="section-label">Backup</div>
+    <div class="card-row" style="cursor:default;">
+      <div style="flex:1;">
+        <div class="name">Exportar / Importar dados</div>
+        <div class="meta">Salve um arquivo com tudo que você cadastrou, ou restaure a partir de um backup salvo antes.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:8px;">
+      <div class="btn btn-confirm" style="flex:1;" onclick="exportBackup()">Exportar backup</div>
+      <div class="btn btn-cancel" style="flex:1;" onclick="document.getElementById('import-file-input').click()">Importar backup</div>
+    </div>
+    <input type="file" id="import-file-input" accept="application/json" style="display:none;" onchange="importBackup(event)">
+
+    <div class="section-label" style="margin-top:24px;">Dados</div>
+    <div class="card-row" style="cursor:default;">
+      <div style="flex:1;">
+        <div class="name">Limpar dados de exemplo</div>
+        <div class="meta">Remove os credores e contas atuais pra você começar do zero com dados reais.</div>
+      </div>
+    </div>
+    <div class="btn-danger" style="margin-top:8px;" onclick="openModal('confirmClearAll')">Limpar tudo</div>
+
+    <div class="section-label" style="margin-top:24px;">Notificações</div>
+    <div class="toggle-row" style="margin-top:0;">
+      <span class="lbl">Avisar antes do vencimento</span>
+      <div class="switch on" onclick="this.classList.toggle('on')"><div class="knob"></div></div>
+    </div>
+  `;
+}
+
+function exportBackup(){
+  const payload = JSON.stringify({ credores: state.credores, exportadoEm: new Date().toISOString() }, null, 2);
+  const blob = new Blob([payload], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'finc-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importBackup(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (e) => {
+    try{
+      const parsed = JSON.parse(e.target.result);
+      const credores = Array.isArray(parsed) ? parsed : parsed.credores;
+      if(!Array.isArray(credores)) throw new Error('formato inválido');
+      state.credores = credores;
+      await saveData();
+      goTo('home');
+    }catch(err){
+      alert('Não foi possível ler esse arquivo de backup.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function viewCredores(){
+  const rows = state.credores.map(c => `
+    <div class="card-row" onclick="goTo('credorDetail', {selectedCredorId:'${c.id}'})">
+      <div>
+        <div class="name">${c.nome}</div>
+        <div class="meta">${c.dividas.length} conta${c.dividas.length===1?'':'s'}</div>
+      </div>
+      <div class="val">${fmtMoney(credorSaldo(c))}</div>
+    </div>
+  `).join('');
+
+  return `
+    ${renderTopbar()}
+    <div class="section-label">Credores</div>
+    ${ state.credores.length ? rows : `<div class="empty-state">Nenhum credor ainda.<br>Adicione o primeiro abaixo.</div>` }
+    <div class="btn-add" onclick="openModal('addCredor')">+ Novo credor</div>
+  `;
+}
+
+function viewCredorDetail(){
+  const c = state.credores.find(c=>c.id===state.selectedCredorId);
+  if(!c) return `<div class="empty-state">Credor não encontrado.</div>`;
+
+  const comVenc = c.dividas.filter(d=>d.temVencimento).sort((a,b)=>a.vencimentoDia-b.vencimentoDia);
+  const semVenc = c.dividas.filter(d=>!d.temVencimento);
+
+  const rowFor = (d, dashed) => `
+    <div class="card-row ${dashed?'dashed':''}" onclick="goTo('dividaDetail', {selectedDividaId:'${d.id}'})">
+      <div>
+        <div class="name">${d.nome}</div>
+        <div class="meta">${ d.temVencimento ? 'Venc. dia '+d.vencimentoDia+' · ' : 'Sem vencimento · ' }${ d.tipo==='assinatura' ? 'Recorrente' : d.parcelas.filter(p=>p.pago).length+'/'+d.parcelas.length+' pagas' }</div>
+      </div>
+      <div class="val ${dashed?'muted':''}">${fmtMoney(dividaSaldo(d))}</div>
+    </div>`;
+
+  return `
+    <div class="backbar" onclick="goTo('credores')"><span class="arrow">←</span>${c.nome}<span class="edit-icon" onclick="event.stopPropagation(); openModal('renameCredor', {id:'${c.id}', nomeAtual:'${c.nome}'})">✎</span></div>
+    <div class="hero-card">
+      <div class="hero-label">Compromissos com ${c.nome}</div>
+      <div class="hero-number">${fmtMoney(credorSaldo(c))}</div>
+    </div>
+
+    ${ comVenc.length ? `<div class="section-label">Contas — com vencimento</div>${comVenc.map(d=>rowFor(d,false)).join('')}` : ''}
+    ${ semVenc.length ? `<div class="section-label">Sem vencimento definido</div>${semVenc.map(d=>rowFor(d,true)).join('')}` : ''}
+    ${ !c.dividas.length ? `<div class="empty-state">Nenhuma conta cadastrada ainda.</div>` : ''}
+
+    <div class="btn-add" onclick="openModal('addDivida', {credorId:'${c.id}'})">+ Nova conta</div>
+  `;
+}
+
+function viewDividaDetail(){
+  const c = state.credores.find(c=>c.id===state.selectedCredorId);
+  const d = c && c.dividas.find(d=>d.id===state.selectedDividaId);
+  if(!d) return `<div class="empty-state">Dívida não encontrada.</div>`;
+
+  const hojeStr = new Date().toISOString().slice(0,10);
+  const parcelasHtml = d.parcelas.map(p => {
+    const atrasada = !p.pago && p.dataVenc && p.dataVenc < hojeStr;
+    return `
+    <div class="card-row ${atrasada?'atrasado':''}">
+      <span class="name" onclick="togglePago('${c.id}','${d.id}','${p.id}')" style="flex:1;">${p.label} — ${fmtMoney(p.valor)}</span>
+      <span class="edit-icon" onclick="openModal('editParcela', {credorId:'${c.id}', dividaId:'${d.id}', parcelaId:'${p.id}', valorAtual:${p.valor}})">✎</span>
+      <span class="${p.pago?'badge-pago':(atrasada?'badge-atrasado':'badge-pend')}" onclick="togglePago('${c.id}','${d.id}','${p.id}')" style="margin-left:8px;">${p.pago?'Pago':(atrasada?'Atrasado':'Pendente')}</span>
+    </div>
+  `;
+  }).join('');
+
+  const saquesHtml = d.tipo==='emprestimo' ? `
+    <div class="section-label">Histórico de saques</div>
+    ${ d.saques.length ? d.saques.map(s=>`<div class="saque-row"><span>${s.data}</span><span>${fmtMoney(s.valor)}</span></div>`).join('') : `<div class="mini-note" style="margin:6px 0;">Nenhum saque registrado.</div>` }
+    <div class="btn-add" onclick="openModal('addSaque', {credorId:'${c.id}', dividaId:'${d.id}'})">+ Adicionar saque</div>
+  ` : '';
+
+  const quitada = dividaSaldo(d)===0 && d.parcelas.length>0;
+
+  return `
+    <div class="backbar" onclick="goTo('credorDetail')"><span class="arrow">←</span>${d.nome}<span class="edit-icon" onclick="event.stopPropagation(); openModal('renameDivida', {credorId:'${c.id}', dividaId:'${d.id}', nomeAtual:'${d.nome}'})">✎</span></div>
+    <div class="hero-card">
+      <div class="hero-label">Restante</div>
+      <div class="hero-number">${fmtMoney(dividaSaldo(d))}</div>
+      <div class="mini-note" style="margin:0; text-align:left;">${d.tipoLabel || ''} ${ d.temVencimento ? '· Vencimento: dia '+d.vencimentoDia : '· Sem vencimento fixo' }</div>
+    </div>
+    ${ quitada ? `
+    <div class="quitada-banner">
+      <div class="title">🎉 Conta quitada!</div>
+      <div class="mini-note" style="margin:0 0 12px;">Você pode manter no histórico ou excluir esta conta.</div>
+      <div class="btn-danger" onclick="openModal('confirmDelete', {credorId:'${c.id}', dividaId:'${d.id}', nome:'${d.nome}'})">Excluir conta</div>
+    </div>
+    ` : '' }
+    <div class="section-label">Parcelas</div>
+    ${parcelasHtml}
+    ${saquesHtml}
+  `;
+}
+
+function render(){
+  const content = document.getElementById('content');
+  if(!state.loaded){
+    content.innerHTML = `<div class="empty-state">Carregando...</div>`;
+    return;
+  }
+  let html = '';
+  if(state.view==='home') html = viewHome();
+  else if(state.view==='credores') html = viewCredores();
+  else if(state.view==='credorDetail') html = viewCredorDetail();
+  else if(state.view==='dividaDetail') html = viewDividaDetail();
+  else if(state.view==='calendario') html = viewCalendario();
+  else if(state.view==='resumo') html = viewResumo();
+  else if(state.view==='perfil') html = viewPerfil();
+  else if(state.view==='configuracoes') html = viewConfiguracoes();
+  content.innerHTML = html;
+
+  document.querySelectorAll('.navitem[data-nav]').forEach(el=>{
+    el.classList.toggle('active', el.dataset.nav===state.view || (el.dataset.nav==='credores' && ['credorDetail','dividaDetail'].includes(state.view)));
+  });
+
+  const shell = document.getElementById('shell');
+  const existingModal = document.getElementById('modal-overlay');
+  if(existingModal) existingModal.remove();
+  if(state.modal){
+    shell.insertAdjacentHTML('beforeend', renderModal());
+    setTimeout(()=>{
+      const inp = document.getElementById('m-nome');
+      if(inp) inp.focus();
+    },50);
+  }
+}
+
+// ---------- Menu lateral ----------
+function openMenu(){
+  const shell = document.getElementById('shell');
+  const existing = document.getElementById('menu-overlay');
+  if(existing) existing.remove();
+  shell.insertAdjacentHTML('beforeend', `
+    <div id="menu-overlay" onclick="if(event.target.id==='menu-overlay') closeMenu()">
+      <div class="side-menu">
+        <div class="menu-brand">
+          <svg viewBox="34 6 38 74">
+            <rect x="38" y="52" width="26" height="24" rx="6" fill="var(--green)"/>
+            <rect x="41" y="34" width="20" height="14" rx="5" fill="var(--green)" opacity="0.65"/>
+            <circle cx="49" cy="24" r="3.2" fill="var(--green)" opacity="0.5"/>
+            <circle cx="60" cy="19" r="2.3" fill="var(--green)" opacity="0.38"/>
+            <circle cx="54" cy="12" r="1.7" fill="var(--green)" opacity="0.26"/>
+            <circle cx="66" cy="28" r="1.3" fill="var(--green)" opacity="0.18"/>
+          </svg>
+          <span class="topbar-word" style="font-size:17px;">FIN<span class="c">C</span></span>
+        </div>
+        <div class="menu-item ${state.view==='home'?'active':''}" onclick="closeMenu(); goTo('home', {selectedCredorId:null, selectedDividaId:null});">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>Início
+        </div>
+        <div class="menu-item ${['credores','credorDetail','dividaDetail'].includes(state.view)?'active':''}" onclick="closeMenu(); goTo('credores', {selectedCredorId:null, selectedDividaId:null});">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>Contas
+        </div>
+        <div class="menu-item ${state.view==='perfil'?'active':''}" onclick="closeMenu(); goTo('perfil', {selectedCredorId:null, selectedDividaId:null});">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Perfil
+        </div>
+        <div class="menu-item ${state.view==='configuracoes'?'active':''}" onclick="closeMenu(); goTo('configuracoes');">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l2.5 2.5"/></svg>Configurações
+        </div>
+      </div>
+    </div>
+  `);
+}
+function closeMenu(){
+  const el = document.getElementById('menu-overlay');
+  if(el) el.remove();
+}
+
+document.getElementById('navbar').addEventListener('click', (e)=>{
+  const item = e.target.closest('.navitem[data-nav]');
+  if(item) goTo(item.dataset.nav, {selectedCredorId:null, selectedDividaId:null});
+});
+
+// loadData() é chamado automaticamente pelo listener de login (auth.onAuthStateChanged) mais acima.
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('./service-worker.js').catch(console.error);
+  });
+}
+
+setTimeout(()=>{
+  const splash = document.getElementById('splash');
+  if(splash) splash.classList.add('splash-hide');
+}, 3600);
+</script>
+</body>
+</html>
