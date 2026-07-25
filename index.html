@@ -859,6 +859,19 @@ function renderModal(){
         </div>
       </div>`;
   }
+  if(type==='confirmDeleteCredor'){
+  return `
+    <div id="modal-overlay">
+      <div class="modal-sheet">
+        <div class="modal-title">Excluir "${ctx.nome}"?</div>
+        <div class="mini-note" style="margin:0 0 4px; text-align:left;">Isso remove o credor e todas as contas dele. Essa ação não pode ser desfeita.</div>
+        <div class="modal-btns">
+          <div class="btn btn-cancel" onclick="closeModal()">Cancelar</div>
+          <div class="btn" style="background:var(--danger); color:#fff;" onclick="deleteCredor('${ctx.credorId}'); closeModal();">Excluir</div>
+        </div>
+      </div>
+    </div>`;
+}
   if(type==='confirmClearAll'){
     return `
       <div id="modal-overlay">
