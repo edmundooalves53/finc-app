@@ -918,7 +918,12 @@ async function clearAllData(){
   state.modal = null;
   goTo('home');
 }
-function deleteDivida(credorId, dividaId){
+function deleteCredor(credorId){
+  state.credores = state.credores.filter(c=>c.id!==credorId);
+  saveData();
+  goTo('credores');
+}
+  function deleteDivida(credorId, dividaId){
   const c = state.credores.find(c=>c.id===credorId);
   if(!c) return;
   c.dividas = c.dividas.filter(d=>d.id!==dividaId);
