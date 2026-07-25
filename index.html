@@ -1332,7 +1332,7 @@ function viewCredorDetail(){
     </div>`;
 
   return `
-    <div class="backbar" onclick="goTo('credores')"><span class="arrow">←</span>${c.nome}<span class="edit-icon" onclick="event.stopPropagation(); openModal('renameCredor', {id:'${c.id}', nomeAtual:'${c.nome}'})">✎</span></div>
+    <div class="backbar" onclick="goTo('credores')"><span class="arrow">←</span>${c.nome}<span class="edit-icon" onclick="event.stopPropagation(); openModal('renameCredor', {id:'${c.id}', nomeAtual:'${c.nome}'})">✎</span><span class="edit-icon" onclick="event.stopPropagation(); openModal('confirmDeleteCredor', {credorId:'${c.id}', nome:'${c.nome}'})">🗑</span></div>
     <div class="hero-card">
       <div class="hero-label">Compromissos com ${c.nome}</div>
       <div class="hero-number">${fmtMoney(credorSaldo(c))}</div>
@@ -1340,8 +1340,13 @@ function viewCredorDetail(){
 
     ${ comVenc.length ? `<div class="section-label">Contas — com vencimento</div>${comVenc.map(d=>rowFor(d,false)).join('')}` : ''}
     ${ semVenc.length ? `<div class="section-label">Sem vencimento definido</div>${semVenc.map(d=>rowFor(d,true)).join('')}` : ''}
-    ${ !c.dividas.length ? `<div class="empty-state">Nenhuma conta cadastrada ainda.</div>` : ''}
-
+    ${ !c.dividas.length ? `
+  <div class="quitada-banner">
+    <div class="title">Nenhuma conta cadastrada</div>
+    <div class="mini-note" style="margin:0 0 12px;">Se não for mais usar este credor, você pode excluí-lo.</div>
+    <div class="btn-danger" onclick="openModal('confirmDeleteCredor', {credorId:'${c.id}', nome:'${c.nome}'})">Excluir credor</div>
+  </div>
+` : '' }
     <div class="btn-add" onclick="openModal('addDivida', {credorId:'${c.id}'})">+ Nova conta</div>
   `;
 }
