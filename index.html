@@ -461,7 +461,12 @@ let state = {
 function uid(){ return Math.random().toString(36).slice(2,10); }
 
 function fmtMoney(v){
+  if(state.valoresOcultos) return 'R$ ••••••';
   return 'R$ ' + v.toLocaleString('pt-BR', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+function toggleValores(){
+  state.valoresOcultos = !state.valoresOcultos;
+  render();
 }
 
 // ======================================================================
